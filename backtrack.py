@@ -23,7 +23,7 @@ sudoku = [
 ]
 
 # 122 faster? due to the first row having constraints maybe?
-other_sudoku = [
+sudoku2 = [
     8,6,0,0,0,0,0,1,7,
     0,0,5,0,0,0,4,0,0,
     0,0,3,6,0,8,5,0,0,
@@ -48,37 +48,6 @@ other_sudoku = [
 #]
 # fmt: on
 foo = [list(range(1, N + 1)) for _ in range(N * N)]
-
-# foo[0] = [8]
-# foo[1] = [6]
-# foo[7] = [1]
-# foo[8] = [7]
-# foo[11] = [5]
-# foo[15] = [4]
-# foo[20] = [3]
-# foo[21] = [6]
-# foo[23] = [8]
-# foo[24] = [5]
-# foo[28] = [4]
-# foo[31] = [9]
-# foo[34] = [2]
-# foo[38] = [1]
-# foo[39] = [4]
-# foo[41] = [7]
-# foo[42] = [9]
-# foo[46] = [5]
-# foo[49] = [1]
-# foo[52] = [7]
-# foo[56] = [2]
-# foo[57] = [8]
-# foo[59] = [3]
-# foo[60] = [6]
-# foo[65] = [7]
-# foo[69] = [2]
-# foo[72] = [4]
-# foo[73] = [9]
-# foo[79] = [3]
-# foo[80] = [8]
 
 
 def reject_box4(cells):
@@ -106,6 +75,18 @@ def reject_box4(cells):
                 if box_key in box:
                     return box_key
     return False
+
+
+def iterate_box_indices(which):
+    if N != 9:
+        return
+
+    box_size = 3
+    top_left = (which // box_size) * box_size * N + (which % box_size * box_size)
+    print(f"top_left: {top_left}")
+    for row in range(box_size):
+        for col in range(box_size):
+            yield top_left + col + (row * N)
 
 
 def reject_box9(cells):
@@ -164,10 +145,7 @@ def reject_box(cells):
     if N == 9:
         return reject_box9(cells)
     elif N == 4:
-        key = reject_box4(cells)
-        # if key:
-        # print(f"rejected box: {key} cells: {cells}")
-        return key
+        return reject_box4(cells)
     return False
 
 
@@ -330,6 +308,25 @@ def prune_col(P, col, val):
         s += N
 
 
+def get_box_for_cell(index):
+    for i in range(N):
+        if index in list(iterate_box_indices(i)):
+            return i
+    raise ValueError(f"Couldnt find box for index: {index}")
+
+
+def prune_box(P, index, val):
+    if N != 9:
+        return
+    which = get_box_for_cell(index)
+    for index in iterate_box_indices(which):
+        cell = P[index]
+        if len(cell) > 1:
+            if val in cell:
+                cell.remove(val)
+                # print(f"box {which} removed {val} from cell: {cell}")
+
+
 def prune(P):
     for index, cell in enumerate(P):
         if len(cell) == 1:
@@ -339,6 +336,7 @@ def prune(P):
             # print(f"val: {val} row: {row} col: {col}")
             prune_row(P, row, val)
             prune_col(P, col, val)
+            prune_box(P, index, val)
     return P
 
 
