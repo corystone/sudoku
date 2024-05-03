@@ -11,14 +11,43 @@ sudoku = [0] * N * N
 foo = [list(range(1, N + 1)) for _ in range(N * N)]
 
 
-def reject_box(cells):
-    if N != 9:
-        return False
+def reject_box4(cells):
     box = {}
+    for x in range(2):
+        for y in range(2):
+            print(f"x:{x} y:{y}")
+            top_left = 2 * N * x + 2 * y
+            print(f"top_left: {top_left}")
+            if cells[top_left]:
+                box_key = (x, y, cells[top_left])
+                box[box_key] = True
+            if cells[top_left + 1]:
+                box_key = (x, y, cells[top_left + 1])
+                if box_key in box:
+                    return box_key
+                box[box_key] = True
+            bottom_left = top_left + N
+            print(f"bottom_left: {bottom_left}")
 
-    for x in range(3):
-        for y in range(3):
-            top_left = 3 * x + y
+            if cells[bottom_left]:
+                box_key = (x, y, cells[bottom_left])
+                if box_key in box:
+                    return box_key
+                box[box_key] = True
+            if cells[bottom_left + 1]:
+                box_key = (x, y, cells[bottom_left + 1])
+                if box_key in box:
+                    return box_key
+    return False
+
+
+def reject_box9(cells):
+    box = {}
+    for y in range(3):
+        for x in range(3):
+            top_left = 3 * N * y + 3 * x
+            print(f"x:{x} y:{y}")
+            print(f"top_left: {top_left}")
             if cells[top_left]:
                 box_key = (x, y, cells[top_left])
                 box[box_key] = True
@@ -63,6 +92,18 @@ def reject_box(cells):
                 box_key = (x, y, cells[bottom_left + 2])
                 if box_key in box:
                     return box_key
+    return False
+
+
+def reject_box(cells):
+    if N == 9:
+        return reject_box9(cells)
+    elif N == 4:
+        key = reject_box4(cells)
+        if key:
+            print(f"rejected box: {key} cells: {cells}")
+
+        return key
     return False
 
 
