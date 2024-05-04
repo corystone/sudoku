@@ -95,7 +95,6 @@ def iterate_box_indices(which):
 
     box_size = 3
     top_left = (which // box_size) * box_size * N + (which % box_size * box_size)
-    # print(f"top_left: {top_left}")
     for row in range(box_size):
         for col in range(box_size):
             yield top_left + col + (row * N)
@@ -103,19 +102,9 @@ def iterate_box_indices(which):
 
 def reject_box9(cells):
     box = {}
-    # short, snazzy, slow? version
-    #    for i in range(N):
-    #        for index in iterate_box_indices(i):
-    #            if cells[index]:
-    #                box_key = (i, cells[index])
-    #                if box_key in box:
-    #                    return box_key
-    #                box[box_key] = True
-
     for which in range(N):
         box_size = 3
         top_left = (which // box_size) * box_size * N + (which % box_size * box_size)
-        # print(f"top_left: {top_left}")
         for row in range(box_size):
             for col in range(box_size):
                 index = top_left + col + (row * N)
@@ -124,7 +113,22 @@ def reject_box9(cells):
                     if box_key in box:
                         return box_key
                     box[box_key] = True
+    return False
 
+
+def reject_box2(cells, index):
+    which = get_box_for_index(index)
+    box = {}
+    box_size = 3
+    top_left = (which // box_size) * box_size * N + (which % box_size * box_size)
+    for row in range(box_size):
+        for col in range(box_size):
+            index = top_left + col + (row * N)
+            val = cells[index]
+            if val:
+                if val in box:
+                    return True
+                box[val] = True
     return False
 
 
@@ -138,6 +142,39 @@ def reject_box(cells):
 
 def blank_sudoku():
     return [0] * N * N
+
+
+def reject2(P, c):
+    tmp = blank_sudoku()
+    cell = 0
+    for entry in c:
+        tmp[cell] = P[cell][entry]
+        cell += 1
+
+    idx = len(c) - 1
+    if idx < 0:
+        return False
+
+    row = idx // N
+    col = idx % N
+
+    rows = {}
+    for x in range(row * N, (row + 1) * N):
+        val = tmp[x]
+        if val:
+            if val in rows:
+                return True
+            rows[val] = True
+
+    cols = {}
+    for x in range(col, N * N, N):
+        val = tmp[x]
+        if val:
+            if val in cols:
+                return True
+            cols[val] = True
+
+    return reject_box2(tmp, idx)
 
 
 def reject(P, c):
@@ -241,11 +278,10 @@ def output(P, c):
 
 
 def backtrack(P, c):
-    if reject(P, c):
+    if reject2(P, c):
         return
     elif accept(P, c):
         output(P, c)
-    # print(f"backtrack c: {c}")
     s = first(P, c)
     while s is not None:
         backtrack(P, s)
@@ -302,10 +338,20 @@ def get_box_for_cell(index):
     raise ValueError(f"Couldnt find box for index: {index}")
 
 
+def get_box_for_index(index):
+    row = index // N
+    col = index % N
+
+    box_row = row // 3
+    box_col = col // 3
+
+    return box_row * 3 + box_col
+
+
 def prune_box(P, index, val):
     if N != 9:
         return
-    which = get_box_for_cell(index)
+    which = get_box_for_index(index)
     for index in iterate_box_indices(which):
         cell = P[index]
         if len(cell) > 1:
@@ -338,7 +384,7 @@ def get_constraints(sudoku):
 if __name__ == "__main__":
     start = datetime.now()
     solved = False
-    constraints = get_constraints(sudoku)
+    constraints = get_constraints(hard_sudoku)
     prune(constraints)
     print(constraints)
     try:
