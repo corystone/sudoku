@@ -35,6 +35,18 @@ sudoku2 = [
     4,9,0,0,0,0,0,3,8,
 ]
 
+hard_sudoku = [
+    0,3,0,0,0,0,0,0,0,
+    8,0,0,4,7,0,9,0,0,
+    1,0,9,0,5,0,8,0,6,
+    2,0,0,0,0,5,7,0,0,
+    0,0,0,0,0,0,0,0,0,
+    0,0,6,1,0,0,0,0,2,
+    4,0,3,0,8,0,1,0,9,
+    0,0,5,0,4,7,0,0,3,
+    0,0,0,0,0,0,0,5,0,
+]
+
 #sudoku = [
 #    0,0,0,0,0,0,0,0,0,
 #    0,0,0,0,0,0,0,0,0,
@@ -83,7 +95,7 @@ def iterate_box_indices(which):
 
     box_size = 3
     top_left = (which // box_size) * box_size * N + (which % box_size * box_size)
-    print(f"top_left: {top_left}")
+    # print(f"top_left: {top_left}")
     for row in range(box_size):
         for col in range(box_size):
             yield top_left + col + (row * N)
@@ -91,53 +103,28 @@ def iterate_box_indices(which):
 
 def reject_box9(cells):
     box = {}
-    for y in range(3):
-        for x in range(3):
-            top_left = 3 * N * y + 3 * x
-            if cells[top_left]:
-                box_key = (x, y, cells[top_left])
-                box[box_key] = True
-            if cells[top_left + 1]:
-                box_key = (x, y, cells[top_left + 1])
-                if box_key in box:
-                    return box_key
-                box[box_key] = True
-            if cells[top_left + 2]:
-                box_key = (x, y, cells[top_left + 2])
-                if box_key in box:
-                    return box_key
-                box[box_key] = True
-            middle_left = top_left + 9
-            if cells[middle_left]:
-                box_key = (x, y, cells[middle_left])
-                if box_key in box:
-                    return box_key
-                box[box_key] = True
-            if cells[middle_left + 1]:
-                box_key = (x, y, cells[middle_left + 1])
-                if box_key in box:
-                    return box_key
-                box[box_key] = True
-            if cells[middle_left + 2]:
-                box_key = (x, y, cells[middle_left + 2])
-                if box_key in box:
-                    return box_key
-                box[box_key] = True
-            bottom_left = middle_left + 9
-            if cells[bottom_left]:
-                box_key = (x, y, cells[bottom_left])
-                if box_key in box:
-                    return box_key
-                box[box_key] = True
-            if cells[bottom_left + 1]:
-                box_key = (x, y, cells[bottom_left + 1])
-                if box_key in box:
-                    return box_key
-            if cells[bottom_left + 2]:
-                box[box_key] = True
-                box_key = (x, y, cells[bottom_left + 2])
-                if box_key in box:
-                    return box_key
+    # short, snazzy, slow? version
+    #    for i in range(N):
+    #        for index in iterate_box_indices(i):
+    #            if cells[index]:
+    #                box_key = (i, cells[index])
+    #                if box_key in box:
+    #                    return box_key
+    #                box[box_key] = True
+
+    for which in range(N):
+        box_size = 3
+        top_left = (which // box_size) * box_size * N + (which % box_size * box_size)
+        # print(f"top_left: {top_left}")
+        for row in range(box_size):
+            for col in range(box_size):
+                index = top_left + col + (row * N)
+                if cells[index]:
+                    box_key = (which, cells[index])
+                    if box_key in box:
+                        return box_key
+                    box[box_key] = True
+
     return False
 
 
@@ -324,7 +311,7 @@ def prune_box(P, index, val):
         if len(cell) > 1:
             if val in cell:
                 cell.remove(val)
-                # print(f"box {which} removed {val} from cell: {cell}")
+                print(f"box {which} removed {val} from cell: {cell}")
 
 
 def prune(P):
