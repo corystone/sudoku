@@ -1,4 +1,5 @@
 use std::time::Instant;
+use std::env;
 
 // 4
 //const SQRTN: usize = 2;
@@ -9,6 +10,7 @@ const SQRTN: usize = 3;
 const N: usize = 9;
 const NU8: u8 = 9;
 const N2: usize = 81;
+const SENTINEL_BLANK: usize = 255;
 
 //const SUDOKU: [u8; N2] = [
 //    0, 0, 0, 0,
@@ -53,6 +55,31 @@ const SUDOKU2: [u8; N2] = [
     0,0,7,0,0,0,2,0,0,
     4,9,0,0,0,0,0,3,8,
 ];
+
+const REALLY_HARD_SUDOKU: [u8; N2] = [
+    0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,3,0,8,5,
+    0,0,1,0,2,0,0,0,0,
+    0,0,0,5,0,7,0,0,0,
+    0,0,4,0,0,0,1,0,0,
+    0,9,0,0,0,0,0,0,0,
+    5,0,0,0,0,0,0,7,3,
+    0,0,2,0,1,0,0,0,0,
+    0,0,0,0,4,0,0,0,9,
+];
+
+const REALLY_HARD_SUDOKU2: [u8; N2] = [
+    5,0,0,0,0,0,0,7,3,
+    0,0,2,0,1,0,0,0,0,
+    0,0,0,0,4,0,0,0,9,
+    0,0,0,5,0,7,0,0,0,
+    0,0,4,0,0,0,1,0,0,
+    0,9,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,3,0,8,5,
+    0,0,1,0,2,0,0,0,0,
+];
+
 
 fn get_constraints(s: &[u8; N2]) -> [Vec<u8>; N2]{
     let mut constraints: [Vec<u8>; N2] = core::array::from_fn(|_| Vec::new());
@@ -191,25 +218,21 @@ fn reject_box(cells: &[u8; N2], index: usize) -> bool {
     false
 }
 
-fn reject(p: &[Vec<u8>; N2], c: &Vec<u8>) -> bool {
-    let mut tmp = blank_sudoku();
-    let mut cell = 0;
-    for entry in c {
-        tmp[cell] = p[cell][usize::from(*entry)];
-        cell += 1;
-    }
-
-    if c.len() == 0 {
+fn reject(p: &[Vec<u8>; N2], c: &Vec<usize>, cell_index: usize) -> bool {
+    let tmp = c_to_sudoku(p, c);
+    //println!("reject, tmp: {:?}", tmp);
+    //println!("reject, c: {:?}", c);
+    if cell_index == SENTINEL_BLANK {
         return false
     }
 
-    let idx = c.len() - 1;
-    let row = idx / N;
-    let col = idx % N;
+    let row = cell_index / N;
+    let col = cell_index % N;
 
     let mut rows = [0u8; N+1];
     for x in row * N..(row + 1) * N {
         let val = tmp[x];
+        //println!("x: {x} val: {val}, rows: {:?}", rows);
         if val != 0u8 {
             let index = usize::from(val);
             if rows[index] != 0u8 {
@@ -233,32 +256,28 @@ fn reject(p: &[Vec<u8>; N2], c: &Vec<u8>) -> bool {
         }
     }
 
-    return reject_box(&tmp, idx);
+    return reject_box(&tmp, cell_index);
 }
 
-fn accept(p: &[Vec<u8>; N2], c: &Vec<u8>) -> bool {
+fn accept(p: &[Vec<u8>; N2], c: &Vec<usize>) -> bool {
     if c.len() < N {
         return false
     }
-    let mut tmp = blank_sudoku();
-    let mut cell = 0;
-    for entry in c {
-        tmp[cell] = p[cell][usize::from(*entry)];
-        cell += 1;
-    }
-
+    let tmp = c_to_sudoku(p, c);
     if !tmp.contains(&0u8) {
         return true
     }
     false
 }
 
-fn c_to_sudoku(p: &[Vec<u8>; N2], c: &Vec<u8>) -> [u8; N2] {
+fn c_to_sudoku(p: &[Vec<u8>; N2], c: &Vec<usize>) -> [u8; N2] {
     let mut tmp = blank_sudoku();
     let mut cell = 0;
-    for entry in c {
-        tmp[cell] = p[cell][usize::from(*entry)];
-        cell += 1;
+    for (cell_index, entry) in c.into_iter().enumerate() {
+        if *entry == SENTINEL_BLANK {
+            continue
+        }
+        tmp[cell_index] = p[cell_index][*entry];
     }
     tmp
 }
@@ -280,46 +299,49 @@ fn pprint_sudoku(cells: [u8; N2]) {
     }
 }
 
-fn output(p: &[Vec<u8>; N2], c: &Vec<u8>) {
+fn output(p: &[Vec<u8>; N2], c: &Vec<usize>) {
     let tmp = c_to_sudoku(p, c);
     println!("VICTORY!!");
     pprint_sudoku(tmp);
 }
 
-fn first(p: &[Vec<u8>; N2], c: &mut Vec<u8>) -> Option<Vec<u8>> {
+fn first(p: &[Vec<u8>; N2], c: &mut Vec<usize>) -> (bool, usize, Vec<usize>) {
     let mut new_vec = c.clone();
-    let cell = c.len();
-    if cell < p.len() {
-        new_vec.push(0u8);
-        return Some(new_vec)
-    }
-    return None
-}
+    let mut shortest_index = 0usize;
+    let mut shortest_count = N;
 
-fn next(p: &[Vec<u8>; N2], s: &mut Vec<u8>) -> Vec<u8> {
-    let done = vec![];
-    let cell = s.len();
-    if cell > p.len() || s.len() == 0 {
-        return done
+    for (index, entry) in c.into_iter().enumerate() {
+        if *entry == SENTINEL_BLANK {
+            let cur_len = p[index].len();
+            if cur_len < shortest_count {
+                shortest_count = cur_len;
+                shortest_index = index;
+            }
+        }
     }
-    let choices = &p[cell - 1];
-    let cur = if let Some(x) = s.pop() {
-        x
+    //println!("choosing index: {shortest_index} with len {shortest_count}");
+
+    if shortest_count == N {
+        //println!("WE COULDN'T FIND A FIRST CANDIDATE! MAYBE WE'RE AT THE BOTTOM?");
+        return (true, shortest_index, new_vec)
     } else {
-        return done
-    };
-    if usize::from(cur) == choices.len() - 1 {
-        return done
+        new_vec[shortest_index] = 0usize;
+        return (false, shortest_index, new_vec)
     }
-    let mut new_s = s.clone();
-    new_s.push(cur+1);
-    //println!("NEXT NOT DONE! s: {:?}", new_s);
-    new_s
 }
 
-fn backtrack(p: &[Vec<u8>; N2], c: &mut Vec<u8>) -> bool {
+fn next(p: &[Vec<u8>; N2], s: &mut Vec<usize>, cell_index: usize, choice_index: usize) -> bool {
+    if p[cell_index].len() == choice_index {
+        return true
+    }
+    //s[cell_index] = p[cell_index][choice_index];
+    s[cell_index] = choice_index;
+    false
+}
+
+fn backtrack(p: &[Vec<u8>; N2], c: &mut Vec<usize>, cell_index: usize) -> bool {
     //println!("backtrack, c: {:?}", c);
-    if reject(p, c) { 
+    if reject(p, c, cell_index) { 
         return false
     }
     else if accept(p, c) {
@@ -327,30 +349,36 @@ fn backtrack(p: &[Vec<u8>; N2], c: &mut Vec<u8>) -> bool {
         return true
     }
 
-    let mut s = if let Some(x) = first(p, c) {
-        x
-    } else {
+    let (stop, cell_index, mut s) = first(p, c);
+    // We're trying the first choice for this index.
+    let mut choice_index = 0usize;
+    if stop {
+        //println!("FIRST SAYS STOP!");
         return false
-    };
-    while s.len() != 0 {
+    }
+    let mut stop = false;
+    while !stop {
         //println!("backtrack loop, s: {:?}", s);
-        if backtrack(p, &mut s) {
+        if backtrack(p, &mut s, cell_index) {
             return true
         }
-        s = next(p, &mut s);
+        choice_index += 1;
+        stop = next(p, &mut s, cell_index, choice_index);
+        //println!("next: cell: {cell_index}, choice: {choice_index}, choices: {:?}, s: {:?}", p[cell_index], s);
     }
     false
 }
 
 fn main() {
+    env::set_var("RUST_BACKTRACE", "1");
     let start = Instant::now();
     println!("Hello2, world!");
-    let mut constraints = get_constraints(&SUDOKU2);
+    let mut constraints = get_constraints(&REALLY_HARD_SUDOKU2);
     prune(&mut constraints);
     println!("CONSTRAINTS: {:?}", constraints);
 
-    let mut root: Vec<u8> = vec![];
-    let solved = backtrack(&constraints, &mut root);
+    let mut root = vec![SENTINEL_BLANK; N2];
+    let solved = backtrack(&constraints, &mut root, SENTINEL_BLANK);
     if !solved {
         println!("NO SOLUTION FOUND :(")
     }
