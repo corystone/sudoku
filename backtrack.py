@@ -381,10 +381,24 @@ def get_constraints(sudoku):
     return constraints
 
 
+# fmt: off
+p = [
+5,3,0,0,7,0,0,0,0,
+6,0,0,1,9,5,0,0,0,
+0,9,8,0,0,0,0,6,0,
+8,0,0,0,6,0,0,0,3,
+4,0,0,8,0,3,0,0,1,
+7,0,0,0,2,0,0,0,6,
+0,6,0,0,0,0,2,8,0,
+0,0,0,4,1,9,0,0,5,
+0,0,0,0,8,0,0,7,9]
+# fmt: on
+
+
 if __name__ == "__main__":
     start = datetime.now()
     solved = False
-    constraints = get_constraints(hard_sudoku)
+    constraints = get_constraints(p)
     prune(constraints)
     print(constraints)
     try:
